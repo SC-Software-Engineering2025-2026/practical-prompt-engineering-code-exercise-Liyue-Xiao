@@ -1,0 +1,258 @@
+:root {
+  --bg: #f2f6fb;
+  --bg-gradient-a: #dce8ff;
+  --bg-gradient-b: #f7f2ff;
+  --surface: #ffffff;
+  --surface-soft: #f8fbff;
+  --text: #132034;
+  --text-muted: #50627a;
+  --border: #d8e2ef;
+  --primary: #0f5ae0;
+  --primary-dark: #0a44b1;
+  --danger: #c62828;
+  --danger-bg: #fff1f1;
+  --shadow: 0 10px 30px rgba(16, 36, 66, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 650px at 15% -20%, var(--bg-gradient-a), transparent 60%),
+    radial-gradient(900px 500px at 95% 10%, var(--bg-gradient-b), transparent 60%),
+    var(--bg);
+  min-height: 100vh;
+}
+
+.app-shell {
+  max-width: 980px;
+  margin: 3rem auto;
+  padding: 0 1rem 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.hero {
+  background: linear-gradient(135deg, #ffffff 0%, #f4f8ff 100%);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  animation: revealUp 0.45s ease-out;
+}
+
+.eyebrow {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 0.45rem 0 0.4rem;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--text-muted);
+  max-width: 58ch;
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 1.4rem;
+  box-shadow: var(--shadow);
+}
+
+.panel h2 {
+  margin: 0 0 1rem;
+  font-size: 1.2rem;
+}
+
+.field-group {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+label {
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+input,
+textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+  color: var(--text);
+  background: var(--surface-soft);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #6c97f0;
+  box-shadow: 0 0 0 4px rgba(15, 90, 224, 0.12);
+}
+
+textarea {
+  resize: vertical;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.btn {
+  border: none;
+  border-radius: 999px;
+  padding: 0.66rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.form-message {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  min-height: 1.2em;
+}
+
+.list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.9rem;
+}
+
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.55rem;
+  border-radius: 999px;
+  background: #e7efff;
+  color: var(--primary-dark);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.prompt-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.prompt-item {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.6rem;
+  background: #ffffff;
+  animation: revealUp 0.3s ease-out;
+}
+
+.prompt-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.prompt-title {
+  margin: 0;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.03rem;
+}
+
+.prompt-content {
+  margin: 0;
+  white-space: pre-wrap;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.btn-delete {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid #f3c0c0;
+}
+
+.btn-delete:hover {
+  background: #ffe4e4;
+}
+
+.empty-state {
+  margin-top: 0.6rem;
+  border: 1px dashed #c7d5e7;
+  border-radius: 12px;
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-muted);
+  background: #fafcff;
+}
+
+@keyframes revealUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 680px) {
+  .app-shell {
+    margin: 1.2rem auto;
+  }
+
+  .hero,
+  .panel {
+    border-radius: 14px;
+    padding: 1rem;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
