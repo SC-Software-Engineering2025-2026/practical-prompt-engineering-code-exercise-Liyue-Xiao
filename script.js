@@ -7,7 +7,11 @@ const promptList = document.getElementById("prompt-list");
 
 const getPrompts = () => {
   const raw = localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) : [];
+  const prompts = raw ? JSON.parse(raw) : [];
+  return prompts.map((prompt) => ({
+    ...prompt,
+    rating: Number.isInteger(prompt.rating) ? prompt.rating : 0
+  }));
 };
 
 const savePrompts = (prompts) => {
@@ -18,6 +22,44 @@ const makePreview = (content) => {
   const words = content.trim().split(/\s+/);
   const previewWords = words.slice(0, 16).join(" ");
   return words.length > 16 ? `${previewWords}...` : previewWords;
+};
+
+const setRating = (promptId, rating) => {
+  const updated = getPrompts().map((prompt) =>
+    prompt.id === promptId ? { ...prompt, rating } : prompt
+  );
+  savePrompts(updated);
+  renderPrompts();
+};
+
+const createRatingElement = (prompt) => {
+  const wrap = document.createElement("div");
+  wrap.className = "rating-wrap";
+
+  const label = document.createElement("p");
+  label.className = "rating-label";
+  label.textContent = "Effectiveness";
+
+  const stars = document.createElement("div");
+  stars.className = "star-rating";
+  stars.setAttribute("role", "group");
+  stars.setAttribute("aria-label", `Rate ${prompt.title}`);
+
+  for (let i = 1; i <= 5; i += 1) {
+    const starButton = document.createElement("button");
+    starButton.type = "button";
+    starButton.className = i <= prompt.rating ? "star-btn is-filled" : "star-btn";
+    starButton.textContent = "★";
+    starButton.setAttribute("aria-label", `Set ${prompt.title} rating to ${i} out of 5`);
+    starButton.setAttribute("aria-pressed", i === prompt.rating ? "true" : "false");
+    starButton.addEventListener("click", () => {
+      setRating(prompt.id, i);
+    });
+    stars.appendChild(starButton);
+  }
+
+  wrap.append(label, stars);
+  return wrap;
 };
 
 const renderPrompts = () => {
@@ -43,6 +85,8 @@ const renderPrompts = () => {
     preview.className = "preview";
     preview.textContent = makePreview(prompt.content);
 
+    const rating = createRatingElement(prompt);
+
     const deleteButton = document.createElement("button");
     deleteButton.className = "delete-btn";
     deleteButton.type = "button";
@@ -53,7 +97,7 @@ const renderPrompts = () => {
       renderPrompts();
     });
 
-    card.append(title, preview, deleteButton);
+    card.append(title, preview, rating, deleteButton);
     promptList.appendChild(card);
   });
 };
@@ -73,7 +117,8 @@ form.addEventListener("submit", (event) => {
     {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       title,
-      content
+      content,
+      rating: 0
     }
   ];
 
