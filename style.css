@@ -133,7 +133,7 @@ button[type="submit"]:hover {
   padding: 0.9rem;
   background: rgba(248, 252, 255, 0.92);
   display: grid;
-  gap: 0.5rem;
+  gap: 0.75rem;
 }
 
 .prompt-card h3 {
@@ -147,48 +147,59 @@ button[type="submit"]:hover {
   line-height: 1.4;
 }
 
-.rating-wrap {
+.notes-section {
   display: grid;
-  gap: 0.35rem;
+  gap: 0.65rem;
+  padding-top: 0.2rem;
 }
 
-.rating-label {
+.notes-title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.note-composer,
+.notes-list,
+.note-item {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.note-item {
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 156, 228, 0.24);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.note-text,
+.notes-empty {
   margin: 0;
   color: var(--muted);
-  font-size: 0.86rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  line-height: 1.4;
 }
 
-.star-rating {
+.note-actions {
   display: flex;
-  gap: 0.2rem;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
-.star-btn {
-  border: none;
-  padding: 0;
-  background: transparent;
-  color: #b8c4df;
-  font-size: 1.25rem;
-  line-height: 1;
+.note-action-btn {
+  justify-self: start;
+  border: 1px solid rgba(63, 102, 171, 0.25);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--text);
+  border-radius: 10px;
+  padding: 0.45rem 0.8rem;
+  font: inherit;
   cursor: pointer;
-  transition: transform 120ms ease, color 120ms ease;
 }
 
-.star-btn:hover {
-  transform: translateY(-1px);
-  color: #f2b01e;
-}
-
-.star-btn:focus-visible {
-  outline: 2px solid rgba(30, 167, 216, 0.5);
-  outline-offset: 3px;
-  border-radius: 5px;
-}
-
-.star-btn.is-filled {
-  color: #f2b01e;
+.note-delete-btn {
+  border-color: rgba(200, 74, 90, 0.45);
+  color: #8c2635;
+  background: rgba(255, 238, 241, 0.85);
 }
 
 .delete-btn {
