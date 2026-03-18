@@ -28,6 +28,20 @@
           required
         />
 
+        <label for="prompt-model">Model Name</label>
+        <input
+          id="prompt-model"
+          name="model"
+          type="text"
+          maxlength="100"
+          placeholder="Example: gpt-5.3-codex"
+          required
+        />
+        <div class="recent-models" aria-live="polite">
+          <p class="recent-models-label">Recent models</p>
+          <div id="recent-models" class="recent-models-list"></div>
+        </div>
+
         <label for="prompt-content">Prompt Content</label>
         <textarea
           id="prompt-content"
@@ -36,6 +50,11 @@
           rows="6"
           required
         ></textarea>
+
+        <label class="inline-check" for="prompt-is-code">
+          <input id="prompt-is-code" name="isCode" type="checkbox" />
+          Treat content as code
+        </label>
 
         <button type="submit">Save Prompt</button>
       </form>
