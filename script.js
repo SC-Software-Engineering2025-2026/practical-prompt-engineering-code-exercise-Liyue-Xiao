@@ -1,5 +1,6 @@
 const STORAGE_KEY = "promptLibrary.prompts";
 const RECENT_MODELS_KEY = "promptLibrary.recentModels";
+const EXPORT_SCHEMA_VERSION = 1;
 
 const form = document.getElementById("prompt-form");
 const titleInput = document.getElementById("prompt-title");
@@ -8,6 +9,9 @@ const contentInput = document.getElementById("prompt-content");
 const isCodeInput = document.getElementById("prompt-is-code");
 const promptList = document.getElementById("prompt-list");
 const recentModelsContainer = document.getElementById("recent-models");
+const exportPromptsBtn = document.getElementById("export-prompts-btn");
+const importPromptsBtn = document.getElementById("import-prompts-btn");
+const importFileInput = document.getElementById("import-file-input");
 
 const createId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 
@@ -300,6 +304,370 @@ const coerceRating = (value) => {
   }
 
   return value >= 1 && value <= 5 ? value : 0;
+};
+
+const formatExportTimestampForFilename = (isoTimestamp) => {
+  const safe = isoTimestamp.replace(/[-:]/g, "").replace("T", "-").replace(/\.\d{3}Z$/, "");
+  return safe;
+};
+
+const calculateExportStatistics = (prompts) => {
+  const totalPrompts = prompts.length;
+  const ratedPrompts = prompts.filter((prompt) => prompt.rating >= 1 && prompt.rating <= 5);
+  const averageRating = ratedPrompts.length
+    ? Number((ratedPrompts.reduce((sum, prompt) => sum + prompt.rating, 0) / ratedPrompts.length).toFixed(2))
+    : 0;
+
+  const modelCounts = prompts.reduce((counts, prompt) => {
+    const model = prompt?.metadata?.model;
+    if (typeof model === "string" && model.trim()) {
+      counts[model] = (counts[model] || 0) + 1;
+    }
+    return counts;
+  }, {});
+
+  const mostUsedModel =
+    Object.entries(modelCounts).sort((a, b) => b[1] - a[1])[0]?.[0] || "";
+
+  return {
+    totalPrompts,
+    averageRating,
+    mostUsedModel
+  };
+};
+
+const validatePromptShape = (prompt, indexLabel) => {
+  if (!prompt || typeof prompt !== "object") {
+    throw new Error(`${indexLabel}: prompt must be an object.`);
+  }
+
+  if (typeof prompt.id !== "string" || !prompt.id.trim()) {
+    throw new Error(`${indexLabel}: id must be a non-empty string.`);
+  }
+
+  if (typeof prompt.title !== "string") {
+    throw new Error(`${indexLabel}: title must be a string.`);
+  }
+
+  if (typeof prompt.content !== "string") {
+    throw new Error(`${indexLabel}: content must be a string.`);
+  }
+
+  const metadata = validateMetadata(prompt.metadata);
+
+  if (!Array.isArray(prompt.notes)) {
+    throw new Error(`${indexLabel}: notes must be an array.`);
+  }
+
+  const notes = prompt.notes.map((note, noteIndex) => {
+    const noteLabel = `${indexLabel}: note[${noteIndex}]`;
+    if (!note || typeof note !== "object") {
+      throw new Error(`${noteLabel} must be an object.`);
+    }
+
+    if (typeof note.id !== "string" || !note.id.trim()) {
+      throw new Error(`${noteLabel}.id must be a non-empty string.`);
+    }
+
+    if (typeof note.text !== "string") {
+      throw new Error(`${noteLabel}.text must be a string.`);
+    }
+
+    if (!isValidIso8601(note.createdAt)) {
+      throw new Error(`${noteLabel}.createdAt must be an ISO 8601 string.`);
+    }
+
+    if (!isValidIso8601(note.updatedAt)) {
+      throw new Error(`${noteLabel}.updatedAt must be an ISO 8601 string.`);
+    }
+
+    if (new Date(note.updatedAt).getTime() < new Date(note.createdAt).getTime()) {
+      throw new Error(`${noteLabel}.updatedAt cannot be earlier than createdAt.`);
+    }
+
+    return {
+      id: note.id,
+      text: note.text,
+      createdAt: note.createdAt,
+      updatedAt: note.updatedAt
+    };
+  });
+
+  return {
+    id: prompt.id,
+    title: prompt.title,
+    content: prompt.content,
+    metadata,
+    rating: coerceRating(prompt.rating),
+    notes
+  };
+};
+
+const findDuplicateIds = (items) => {
+  const seen = new Set();
+  const duplicates = new Set();
+
+  items.forEach((item) => {
+    const id = item?.id;
+    if (!id) {
+      return;
+    }
+
+    if (seen.has(id)) {
+      duplicates.add(id);
+      return;
+    }
+
+    seen.add(id);
+  });
+
+  return Array.from(duplicates);
+};
+
+const buildExportPayload = () => {
+  const prompts = getPrompts();
+  const exportedAt = toIsoNow();
+
+  const normalizedPrompts = prompts.map((prompt, index) => validatePromptShape(prompt, `prompts[${index}]`));
+
+  const duplicateIds = findDuplicateIds(normalizedPrompts);
+  if (duplicateIds.length > 0) {
+    throw new Error(`Cannot export data: duplicate prompt IDs found (${duplicateIds.join(", ")}).`);
+  }
+
+  return {
+    version: EXPORT_SCHEMA_VERSION,
+    exportedAt,
+    statistics: calculateExportStatistics(normalizedPrompts),
+    prompts: normalizedPrompts,
+    recentModels: getRecentModels()
+  };
+};
+
+const downloadExportPayload = (payload) => {
+  const json = JSON.stringify(payload, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const timestampPart = formatExportTimestampForFilename(payload.exportedAt);
+  const fileName = `prompt-library-export-${timestampPart}.json`;
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  URL.revokeObjectURL(url);
+};
+
+const validateStatisticsShape = (statistics, prompts) => {
+  if (!statistics || typeof statistics !== "object") {
+    throw new Error("statistics must be an object.");
+  }
+
+  if (typeof statistics.totalPrompts !== "number") {
+    throw new Error("statistics.totalPrompts must be a number.");
+  }
+
+  if (typeof statistics.averageRating !== "number") {
+    throw new Error("statistics.averageRating must be a number.");
+  }
+
+  if (typeof statistics.mostUsedModel !== "string") {
+    throw new Error("statistics.mostUsedModel must be a string.");
+  }
+
+  if (statistics.totalPrompts !== prompts.length) {
+    throw new Error(
+      `statistics.totalPrompts (${statistics.totalPrompts}) does not match prompts length (${prompts.length}).`
+    );
+  }
+};
+
+const validateImportPayload = (payload) => {
+  if (!payload || typeof payload !== "object") {
+    throw new Error("Import payload must be an object.");
+  }
+
+  if (payload.version !== EXPORT_SCHEMA_VERSION) {
+    throw new Error(
+      `Unsupported export version ${String(payload.version)}. Expected version ${EXPORT_SCHEMA_VERSION}.`
+    );
+  }
+
+  if (!isValidIso8601(payload.exportedAt)) {
+    throw new Error("exportedAt must be a valid ISO 8601 timestamp.");
+  }
+
+  if (!Array.isArray(payload.prompts)) {
+    throw new Error("prompts must be an array.");
+  }
+
+  const normalizedPrompts = payload.prompts.map((prompt, index) =>
+    validatePromptShape(prompt, `prompts[${index}]`)
+  );
+
+  const duplicateIds = findDuplicateIds(normalizedPrompts);
+  if (duplicateIds.length > 0) {
+    throw new Error(`Import file has duplicate prompt IDs: ${duplicateIds.join(", ")}.`);
+  }
+
+  validateStatisticsShape(payload.statistics, normalizedPrompts);
+
+  const importedRecentModels = Array.isArray(payload.recentModels)
+    ? payload.recentModels
+        .filter((item) => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item && item.length <= 100)
+        .slice(0, 4)
+    : [];
+
+  return {
+    version: payload.version,
+    exportedAt: payload.exportedAt,
+    statistics: payload.statistics,
+    prompts: normalizedPrompts,
+    recentModels: importedRecentModels
+  };
+};
+
+const chooseImportMode = (existingCount) => {
+  if (existingCount === 0) {
+    return "replace";
+  }
+
+  const replace = window.confirm(
+    "Import mode:\nPress OK to REPLACE your existing prompts.\nPress Cancel to MERGE with existing prompts."
+  );
+
+  return replace ? "replace" : "merge";
+};
+
+const chooseConflictStrategy = (conflictCount) => {
+  const raw = window.prompt(
+    `Found ${conflictCount} prompt ID conflict(s). Choose strategy: overwrite, keep, duplicate`,
+    "overwrite"
+  );
+
+  const strategy = (raw || "").trim().toLowerCase();
+
+  if (!["overwrite", "keep", "duplicate"].includes(strategy)) {
+    throw new Error("Import cancelled: invalid conflict strategy. Use overwrite, keep, or duplicate.");
+  }
+
+  return strategy;
+};
+
+const mergeImportedPrompts = (existingPrompts, incomingPrompts) => {
+  const existingById = new Map(existingPrompts.map((prompt) => [prompt.id, prompt]));
+  const conflicts = incomingPrompts.filter((prompt) => existingById.has(prompt.id));
+
+  if (conflicts.length === 0) {
+    return [...existingPrompts, ...incomingPrompts];
+  }
+
+  const strategy = chooseConflictStrategy(conflicts.length);
+
+  if (strategy === "keep") {
+    const nonConflicting = incomingPrompts.filter((prompt) => !existingById.has(prompt.id));
+    return [...existingPrompts, ...nonConflicting];
+  }
+
+  if (strategy === "overwrite") {
+    const incomingById = new Map(incomingPrompts.map((prompt) => [prompt.id, prompt]));
+    const merged = existingPrompts.map((prompt) => incomingById.get(prompt.id) || prompt);
+    const additions = incomingPrompts.filter((prompt) => !existingById.has(prompt.id));
+    return [...merged, ...additions];
+  }
+
+  const usedIds = new Set(existingPrompts.map((prompt) => prompt.id));
+  const mergedWithCopies = incomingPrompts.map((prompt) => {
+    if (!usedIds.has(prompt.id)) {
+      usedIds.add(prompt.id);
+      return prompt;
+    }
+
+    let nextId = createId();
+    while (usedIds.has(nextId)) {
+      nextId = createId();
+    }
+
+    usedIds.add(nextId);
+    return {
+      ...prompt,
+      id: nextId,
+      metadata: {
+        ...prompt.metadata,
+        updatedAt: toIsoNow()
+      }
+    };
+  });
+
+  return [...existingPrompts, ...mergedWithCopies];
+};
+
+const backupCurrentStorage = () => ({
+  promptsRaw: localStorage.getItem(STORAGE_KEY),
+  recentModelsRaw: localStorage.getItem(RECENT_MODELS_KEY)
+});
+
+const restoreFromBackup = (backup) => {
+  if (backup.promptsRaw === null) {
+    localStorage.removeItem(STORAGE_KEY);
+  } else {
+    localStorage.setItem(STORAGE_KEY, backup.promptsRaw);
+  }
+
+  if (backup.recentModelsRaw === null) {
+    localStorage.removeItem(RECENT_MODELS_KEY);
+  } else {
+    localStorage.setItem(RECENT_MODELS_KEY, backup.recentModelsRaw);
+  }
+};
+
+const importLibraryFromPayload = (payload) => {
+  const existingPrompts = getPrompts();
+  const mode = chooseImportMode(existingPrompts.length);
+  const backup = backupCurrentStorage();
+
+  try {
+    const nextPrompts =
+      mode === "replace"
+        ? payload.prompts
+        : mergeImportedPrompts(existingPrompts, payload.prompts);
+
+    const duplicatesAfterMerge = findDuplicateIds(nextPrompts);
+    if (duplicatesAfterMerge.length > 0) {
+      throw new Error(`Import aborted: duplicate IDs remain after merge (${duplicatesAfterMerge.join(", ")}).`);
+    }
+
+    if (!savePrompts(nextPrompts)) {
+      throw new Error("Could not write prompts to localStorage.");
+    }
+
+    const recentModelsToSave =
+      payload.recentModels.length > 0
+        ? payload.recentModels
+        : Array.from(
+            new Set(nextPrompts.map((prompt) => prompt.metadata.model).filter((model) => model && model !== "Unknown model"))
+          ).slice(0, 4);
+
+    if (!saveRecentModels(recentModelsToSave)) {
+      throw new Error("Could not write recent models to localStorage.");
+    }
+
+    renderRecentModels();
+    renderPrompts();
+    window.alert(
+      `Import successful. Mode: ${mode}. Imported prompts: ${payload.prompts.length}. Total prompts now: ${nextPrompts.length}.`
+    );
+  } catch (error) {
+    restoreFromBackup(backup);
+    renderRecentModels();
+    renderPrompts();
+    throw error;
+  }
 };
 
 const updatePromptRating = (promptId, rating) => {
@@ -677,6 +1045,44 @@ form.addEventListener("submit", (event) => {
     }
   } catch (error) {
     window.alert(error instanceof Error ? error.message : "Unable to save prompt.");
+  }
+});
+
+exportPromptsBtn?.addEventListener("click", () => {
+  try {
+    const payload = buildExportPayload();
+    downloadExportPayload(payload);
+  } catch (error) {
+    window.alert(`Export failed: ${error instanceof Error ? error.message : "Unknown export error."}`);
+  }
+});
+
+importPromptsBtn?.addEventListener("click", () => {
+  importFileInput?.click();
+});
+
+importFileInput?.addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+    } catch (_error) {
+      throw new Error("Selected file is not valid JSON.");
+    }
+
+    const payload = validateImportPayload(parsed);
+    importLibraryFromPayload(payload);
+  } catch (error) {
+    window.alert(`Import failed: ${error instanceof Error ? error.message : "Unknown import error."}`);
+  } finally {
+    importFileInput.value = "";
   }
 });
 

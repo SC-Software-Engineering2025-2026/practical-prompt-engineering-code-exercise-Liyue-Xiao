@@ -54,6 +54,31 @@ body {
   color: var(--muted);
 }
 
+.library-actions {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.secondary-btn {
+  border: 1px solid rgba(63, 102, 171, 0.4);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #163262;
+  padding: 0.5rem 0.8rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+.secondary-btn:hover,
+.secondary-btn:focus-visible {
+  background: rgba(233, 245, 255, 0.95);
+  border-color: rgba(30, 167, 216, 0.55);
+}
+
 .panel {
   background: var(--panel);
   border: 1px solid var(--panel-border);

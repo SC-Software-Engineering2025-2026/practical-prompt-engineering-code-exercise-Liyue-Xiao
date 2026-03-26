@@ -15,6 +15,11 @@
     <header class="app-header">
       <h1>Prompt Library</h1>
       <p>Save reusable prompts for faster workflows.</p>
+      <div class="library-actions" aria-label="Library actions">
+        <button id="export-prompts-btn" type="button" class="secondary-btn">Export Library</button>
+        <button id="import-prompts-btn" type="button" class="secondary-btn">Import Library</button>
+        <input id="import-file-input" type="file" accept="application/json,.json" hidden />
+      </div>
     </header>
 
     <section class="panel form-panel" aria-label="Create prompt">
